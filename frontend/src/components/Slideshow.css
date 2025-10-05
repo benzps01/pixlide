@@ -1,0 +1,59 @@
+.slideshow-container {
+  /* Make the container fill the entire screen */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw; /* 100% of viewport width */
+  height: 100vh; /* 100% of viewport height */
+  background-color: #000; /* Black background for the cinematic look */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* --- ADD THESE TWO LINES --- */
+  padding: 4vh; /* Creates a responsive border around the image */
+  box-sizing: border-box; /* Ensures padding is inside the container */
+}
+
+.slide-image {
+  /* Ensure the image fits within the container without being stretched */
+  width: 100%;   /* Make image take full container width */
+  height: 100%;  /* Make image take full container height */
+  object-fit: cover; /* Keeps the image filling its new, smaller frame */
+  border-radius: 10px;
+}
+
+/* Style for the Previous & Next buttons */
+.prev-button,
+.next-button {
+  cursor: pointer;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: auto;
+  /* Increased padding and font size for better visibility */
+  padding: 22px;
+  color: white;
+  font-weight: bold;
+  font-size: 28px; 
+  background-color: rgba(0, 0, 0, 0.4);
+  border: none;
+  user-select: none;
+  transition: background-color 0.3s ease;
+  z-index: 10; /* Ensure buttons are on top of the image */
+}
+
+.prev-button:hover,
+.next-button:hover {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* Position the "next button" to the right */
+.next-button {
+  right: 0;
+}
+
+/* Position the "previous button" to the left */
+.prev-button {
+  left: 0;
+}
