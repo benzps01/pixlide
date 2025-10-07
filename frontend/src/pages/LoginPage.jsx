@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+// Define the base URL from the environment variable
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
-  const url = import.meta.env.VITE_BACKEND_URL;
 
   const handleLogin = async (e) => {
-    e.preventDefault(); // Prevent form from refreshing the page
+    e.preventDefault();
     setMessage('Logging in...');
     try {
-      const response = await fetch(`${url}/api/login`, {
+      // Use the constant for the fetch call
+      const response = await fetch(`${API_BASE_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -23,12 +26,10 @@ const LoginPage = () => {
       }
 
       const data = await response.json();
-      // Store the token in localStorage for persistence
       localStorage.setItem('accessToken', data.accessToken);
       
-      // Redirect to the homepage after successful login
-      navigate('/'); 
-      window.location.reload(); // Force a reload to update the nav bar
+      navigate('/');
+      window.location.reload();
       
     } catch (error) {
       setMessage(error.message);

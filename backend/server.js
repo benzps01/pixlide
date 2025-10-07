@@ -2,36 +2,38 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import mongoose, { mongo } from 'mongoose';
 
-const app = express();
 dotenv.config();
+
+// --- Basic Setup ---
+const app = express();
 const PORT = process.env.PORT;
 const JWT_SECRET = process.env.JWT_SECRET;
+const MONGO_URI = process.env.MONGO_URI;
 
-const MONGO_URL = 'mongodb://localhost:27017/pixlide';
-mongoose.connect(MONGO_URL)
-  .then(() => console.log("Successfully connected to DB"))
+// --- Database Connection ---
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('Successfully connected to MongoDB'))
   .catch(err => console.error('Connection error', err));
 
-// User Schema
+// --- Mongoose Schemas & Models ---
 const UserSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
 });
 const User = mongoose.model('User', UserSchema);
 
-// Image Schema
 const ImageSchema = new mongoose.Schema({
   filename: { type: String, required: true },
   path: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
 });
-
 const Image = mongoose.model('Image', ImageSchema);
 
 // --- Middleware ---
@@ -51,17 +53,14 @@ const upload = multer({ storage: storage });
 // --- JWT Authentication Middleware ---
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-
-  if (token == null) return res.sendStatus(401); // if there isn't any token
-
+  const token = authHeader && authHeader.split(' ')[1];
+  if (token == null) return res.sendStatus(401);
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403); // if the token is no longer valid
+    if (err) return res.sendStatus(403);
     req.user = user;
-    next(); // move on to the next middleware or the route handler
+    next();
   });
 };
-
 
 // --- API Routes ---
 
@@ -99,11 +98,10 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-
-// IMAGE ROUTES (Now with DB)
+// IMAGE ROUTES
 app.get('/api/images', async (req, res) => {
   try {
-    const images = await Image.find().sort({ createdAt: -1 }); // Get newest images first
+    const images = await Image.find().sort({ createdAt: -1 });
     const imageUrls = images.map(img => ({
       id: img._id,
       url: `http://localhost:${PORT}${img.path}`
@@ -114,25 +112,41 @@ app.get('/api/images', async (req, res) => {
   }
 });
 
-// PROTECTED upload route (Now with DB)
 app.post('/api/upload', authenticateToken, upload.array('images', 10), async (req, res) => {
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ message: 'No files uploaded.' });
   }
-
   try {
     const imageDocs = req.files.map(file => ({
       filename: file.filename,
-      path: `/uploads/${file.filename}`, // Store the URL path
+      path: `/uploads/${file.filename}`,
     }));
-
     await Image.insertMany(imageDocs);
-
     res.status(201).json({
       message: `${req.files.length} file(s) uploaded and saved to DB successfully!`,
     });
   } catch (err) {
     res.status(500).send('Error saving images to database');
+  }
+});
+
+app.delete('/api/images/:id', authenticateToken, async (req, res) => {
+  try {
+    const image = await Image.findById(req.params.id);
+    if (!image) {
+      return res.status(4404).send('Image not found');
+    }
+    const filePath = path.join(__dirname, image.path);
+    fs.unlink(filePath, async (err) => {
+      if (err) {
+        console.error('Error deleting file:', err);
+      }
+      await Image.findByIdAndDelete(req.params.id);
+      res.status(200).send('Image deleted successfully');
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error deleting image');
   }
 });
 
